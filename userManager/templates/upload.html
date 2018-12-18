@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>upload</title>
+</head>
+<body>
+    <input type="text" id="url"/>
+    <input type="button" value="点击" onclick="iframe_change();"/>
+    <iframe id="ifr" src=""></iframe>
+
+    <hr/>
+    iframe
+
+    <form action="/upload.html" method="post" target="f1" enctype="multipart/form-data">
+        <iframe style="display: none" src="" id="f1" onload="loadIframe();" name="f1"></iframe>
+            <input type="text" name="user">
+            <input type="file" name="file">
+            <input type="submit" value="submit">
+
+    </form>
+
+ <hr/>
+    
+    <div class="container" id="imgs">
+        {% for foo in  img_list %}
+            <img src="/{{ foo.path }}" alt="">
+        {% endfor %}
+        
+    </div>
+    
+    <input type="file" name="file" id="file">
+    <input type="button" value="submit" onclick="Upload()">
+    <input type="button" value="submit_JQ" onclick="uploadJQ()">
+
+    <script src="/static/jquery-2.1.4.min.js"></script>
+<script>
+    function Upload() {
+        var  dict = new FormData();
+        dict.append('file',document.getElementById('file').files[0]);
+
+        var  xml = new XMLHttpRequest();
+        xml.open('post','/upload.html',true);
+        xml.send(dict);
+    }
+    function uploadJQ() {
+        var  dict = new FormData();
+        dict.append('file',document.getElementById('file').files[0]);
+        $.ajax({
+            url: '/upload.html',
+            type: 'POST',
+            data: dict,
+            processData: false,
+            contentType: false,
+            success: function (rep) {
+
+            }
+        });
+    }
+
+    function iframe_change() {
+       var  url =  $('#url').val();
+        $('#ifr').attr('src',url) ;
+    }
+    function loadIframe() {
+
+       // iframe 中内容变化的时候调用
+       /* 获取iframe 的内容：
+        var url = $('#f1').contents.find('body').text();
+        var obj = JSON.parse(str_json);
+        if(obj.status){
+            var img = document.createElement('img');
+            img.src="/"+obj.path;
+            $('#imgs').append(img);
+        }*/
+    }
+</script>
+
+</body>
+</html>

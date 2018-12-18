@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{#继承layout.html ，添加自己的东西#}
+{% block css %}
+
+{% endblock %}
+
+{% block context %}
+  <h1>edit teacher</h1>
+
+    <form action="/edit_teacher-{{ obj.id }}.html" method="post">
+        <input type="hidden" id = "id" value="{{ obj.id }}">
+        <p>name:<input type="text" name="name" value="{{ obj.name }}"></p>
+        <p>
+            已管理班级:<select id="sel" name="sel" multiple>
+                        {% for row in t_cls_list %}
+                                     <option value="{{ row.0 }}">{{ row.1 }}</option>
+                        {% endfor %}
+                    </select>
+        未管理班级: <select id="none" multiple>
+                        {% for row in t_exclude %}
+                                     <option value="{{ row.id }}">{{ row.caption }}</option>
+                        {% endfor %}
+                    </select>
+
+        </p>
+            <div>
+                <a  id="removeCls"> >> </a>
+                <a  id="addCls"> << </a>
+            </div>
+        <input type="submit" id="subForm" value="submit"/>
+    </form>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+        $(function () {
+            $('#item_teacher').addClass('active');
+            bindRemoveCls();
+            bindAddCls();
+            bindSubForm();
+        });
+    
+    function bindRemoveCls() {
+        $('#removeCls').click(function () {
+            //获取所有的operation
+            //$('#sel')[0] 获取dom对象，
+           // DOM 对象： obj = document.getElementById('sel')
+            //DOM 对象装换成 jQuery对象 ： j = $(obj)
+            //jQuery 对象转换成DOM 对象： obj = $('.sel')[0]
+            var options = $('#sel')[0].selectedOptions;
+
+           /* $.each(options,function (k,v) {
+                $(v).appendTo('#none')
+            });*/
+           while (options.length >0){
+               $(options[0]).appendTo('#none');
+           }
+        });
+    }
+     function bindAddCls() {
+     $('#addCls').click(function () {
+            //获取所有的operation
+
+            var options = $('#none')[0].selectedOptions;
+
+           /* $.each(options,function (k,v) {
+                $(v).appendTo('#sel')
+            });*/
+             while (options.length >0){
+               $(options[0]).appendTo('#sel');
+           }
+        });
+    }
+    //对提交按钮添加一个事件，让select中全选中
+    function bindSubForm() {
+        $('#subForm').click(function () {
+            $('#sel').children().each(function () {
+                $(this).prop('selected',true);
+            });
+        });
+
+    }
+    </script>
+{% endblock %}

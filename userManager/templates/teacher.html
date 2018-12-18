@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{#继承layout.html ，添加自己的东西#}
+{% block css %}
+    <style>
+        .tag{
+            display: inline-block;
+            padding: 5px;
+            border: 1px solid red;
+            background-color: azure;
+            cursor: pointer;
+        }
+    </style>
+{% endblock %}
+
+{% block context %}
+
+    <div>
+        <a href="/add_teacher.html">add</a>
+    </div>
+
+
+  <!--  获取字典中的值
+    <ul>
+    {% for u in user_list %}
+        <li>{{ u }}</li>
+    {% endfor %}
+
+    ------
+    {% for u in user_list.values %}
+        <li>{{ u }}</li>
+    {% endfor %}
+
+        ------
+    {% for k,v in user_list.items %}
+        <li>{{ k }}--{{ v }}</li>
+    {% endfor %}
+-->
+
+    </ul>
+    <h1> 老师列表  </h1>
+    <table border="1px">
+        <thead></thead>
+        <tbody>
+        {% for dic in teacher_list.values %}
+            <tr>
+                <td>{{ dic.nid }}</td>
+                <td>{{ dic.name }}</td>
+                <td>
+
+                    {% for c in dic.cls_list %}
+                        <span class="tag" nid="{{ c.id }}">{{ c.caption }}</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <a href="/edit_teacher-{{ dic.nid }}.html">edit</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+        $(function () {
+            $('#item_teacher').addClass('active')
+        })
+    </script>
+{% endblock %}

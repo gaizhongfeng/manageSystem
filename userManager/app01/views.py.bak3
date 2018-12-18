@@ -1,0 +1,365 @@
+from django.shortcuts import render,redirect,HttpResponse
+from app01 import models
+from django import views
+from django.utils.decorators import  method_decorator
+import json
+from django.utils.safestring import  mark_safe
+from utils.PageHelper import PageHelper
+# Create your views here.
+
+def outer(func):
+    def inner(req,*args,**kwargs):
+        print(req.method)
+        return  func(req,*args,**kwargs)
+    return inner
+
+
+class Login(views.View):
+
+
+#views.View 中的dispatch 方法的作用是 实现调用的分发
+#重写dispatch 方法可以实现在请求前做点东西，请求后做点东西
+#可以代替装饰器
+    def dispatch(self, request, *args, **kwargs):
+        print('111')
+
+        #调用父类中的dispatch方法
+        ret = super(Login,self).dispatch(request,*args,**kwargs)
+
+        print('222')
+
+        return ret
+
+# 使用装饰器
+    # @method_decorator(outer)
+    # def dispatch(self, request, *args, **kwargs):
+    #
+    #     #调用父类中的dispatch方法
+    #     ret = super(Login,self).dispatch(request,*args,**kwargs)
+    #     return ret
+
+
+
+
+#使用 url 调用类的方式时，在使用装饰器要用@method_decorator(装饰器名)的方式 ， 这种方式是通过反射机制来完成的
+    @method_decorator(outer)
+    def get(self,req,*args,**kwargs):
+        return render(req,'login.html',{'msg':''})
+
+    @method_decorator(outer)
+    def post(self,req,*args,**kwargs):
+        user = req.POST.get('user')
+        pwd = req.POST.get('pwd')
+        result = models.Administrator.objects.filter(username=user,password=pwd).count()
+        if result:
+            req.session['is_login'] = True
+            req.session['username'] = user
+            rep = redirect('/index.html')
+            return rep
+
+        else:
+            message = '用户名或密码错误'
+            return render(req, 'login.html', {'msg': message})
+
+
+
+
+
+def login(req):
+    # 存储提示信息
+    message=""
+    # 接收用户数据做判断
+    print(req.method)
+    if req.method == 'POST':
+        user = req.POST.get('user')
+        pwd = req.POST.get('pwd')
+        result = models.Administrator.objects.filter(username=user,password=pwd).count()
+        if result:
+            # 将当前username 放到cookie中
+            rep= redirect('/index.html')
+
+            # max_age可以设置cookie的超时时间
+            rep.set_cookie('username',user,max_age=10)
+
+            #设置加密的cookie
+            rep.set_signed_cookie('pwd11','123')
+            return  rep
+        else:
+            message = '用户名或密码错误'
+    return  render(req,'login.html',{'msg':message})
+
+
+def logout(req):
+     req.session.clear()
+     return  redirect('/login.html')
+
+def auth(func):
+    def inner(req,*args,**kwargs):
+        is_login= req.session.get('is_login')
+        if is_login:
+            return  func(req,*args,**kwargs)
+        else:
+            return redirect('/login.html')
+    return  inner
+
+
+@auth
+def index(req):
+    # #如果用户已经登录，获取当前用户名
+    # #否则返回登录页面
+    # username =req.session.get('username')
+    #
+    # #获取加密的cookie
+    # # pwd = req.get_signed_cookie('pwd11')
+    # if username:
+    #     return render(req,'index.html',{'username':username})
+    # return redirect('/login.html')
+    current_user = req.session.get('username')
+    return render(req,'index.html',{'username':current_user})
+# @auth
+# def handle_classes(req):
+#     current_user = req.session.get('username')
+#     return redirect(req,'classes.html',{'username':current_user})
+
+
+def handle_classes(req):
+    if req.method == "GET":
+        current_user = req.session.get('username')
+
+        # 获取当前页，p的值默认是1
+        current_page = req.GET.get('p',1)
+        current_page = int(current_page)
+
+
+        pre_page = 5
+
+        #获取数据库中记录总数
+        toal_count = models.Classes.objects.all().count()
+        obj = PageHelper()
+        start =obj.getStart(current_page,pre_page)
+        end = obj.getEnd(current_page,pre_page)
+
+        #获取班级列表
+        cls_list = models.Classes.objects.all()[start:end]
+
+        pager = obj.page_str(toal_count,current_page,'classes.html',pre_page)
+
+        #返回到前端
+        #Django有防止xss攻击的机制，mark_safe() 表示取消xss 攻击，让pager 中的内容显示成正常的html标签
+        #第二种方式是在前端加{{str_pager|safe}}
+        return render(req,'classes.html',
+                  {'username':current_user,
+                   'cls_list':cls_list,
+                   'str_pager':mark_safe(pager)
+                   })
+    elif req.method == "POST":
+        # form表单处理方式
+        # c =  req.POST.get('caption',None)
+        # if c:
+        #     models.Classes.objects.create(caption=c)
+        # return redirect('/classes.html')
+
+        # Ajax方式
+        rep_dict = {'status':True,'error':None,'data':None}
+        c = req.POST.get('caption', None)
+        if c:
+            obj = models.Classes.objects.create(caption=c)
+            rep_dict['data']={'id':obj.id,'caption':obj.caption}
+        else:
+            rep_dict['status']= False
+            rep_dict['error']= 'caption not null '
+
+
+        return HttpResponse(json.dumps(rep_dict))
+
+@auth
+def handle_add_classes(req):
+    message = ""
+    if req.method == "GET":
+        return render(req,'add_classes.html',{'msg':message})
+    elif req.method =="POST":
+        cap = req.POST.get('caption',None)
+        if cap:
+            models.Classes.objects.create(caption=cap)
+
+        else:
+            message="标题不能为空"
+            return render(req,'add_classes.html',{'msg':message})
+        return redirect('/classes.html')
+    else:
+        return redirect('/index.html')
+
+def handle_student(req):
+    current_user = req.session.get('username')
+    return render(req,'student.html',{'username':current_user})
+
+
+@auth
+def handle_teacher(req):
+    # is_login = req.session.get('is_login')
+    # if is_login:
+    #     current_user = req.session.get('username')
+    #     return render(req, 'student.html', {'username': current_user})
+
+    current_user = req.session.get('username')
+
+#分页
+    teacher_list = models.Teacher.objects.filter(id__in=models.Teacher.objects.all()).values('id','name','cls__id','cls__caption')
+
+    result = {}
+    # for obj in teacher_list:
+    #     print(obj.id,obj.name,obj.cls.all())
+    for t in teacher_list:
+        if t['id'] in result:
+            if t['cls__id']:
+                # result[t['id']]['cls_list'].append({'id': t['cls__id'], 'caption': t['cls__caption']} )
+
+                pass
+        else:
+            if t['cls__id']:
+                temp = [{
+                    'id': t['cls__id'],
+                    'caption':t['cls__caption']
+                }]
+            else:
+                temp=[]
+            result[t['id']]={
+                'nid':t['id'],
+                'name':t['name'],
+                'cls_list':temp
+            }
+        # print(t['id'],t['name'],t['cls__id'],t['cls__caption'])
+
+        #字典
+        user_list={
+            'k1':'admin',
+            'k2':'root',
+            'k3':'test'
+        }
+    return render(req, 'teacher.html', {'user_list':user_list,'username': current_user,'teacher_list':result})
+
+
+
+def add_teacher(req):
+    if req.method =='GET':
+        cls = models.Classes.objects.all()
+    elif req.method=='POST':
+        name = req.POST.get('name')
+        cls =  req.POST.getlist('cls')
+        print(name , cls)
+
+        #crate teacher
+        t = models.Teacher.objects.create(name=name)
+
+        #创建老师和班级的关系
+        t.cls.add(*cls)
+
+        return  redirect('/teacher.html')
+    return render(req,'add_teacher.html',{'cls_list':cls})
+
+def edit_teacher(req,nid):
+        #get current teacher info
+        #获取与老师对应的班级
+        #获取与老师没对应的班级
+        #获取所有班级
+        if req.method=='GET':
+            t = models.Teacher.objects.get(id=nid)
+
+            t_cls_list =  t.cls.all().values_list('id')
+
+            id_list = list(zip(*t_cls_list))[0]
+            # print(id_list)
+
+            cls_list = models.Classes.objects.all()
+            # print(t.id)
+            return  render(req,'edit_teacher.html',{'obj':t,'cls_list':cls_list,'id_list':id_list})
+        elif req.method == 'POST':
+            # req.POST.get('nid')
+            name = req.POST.get('name')
+            cls_li = req.POST.getlist('cls')
+
+#修改teacher
+            obj = models.Teacher.objects.get(id= nid)
+            obj.name = name
+            obj.save()
+
+
+            obj.cls.set(cls_li)
+
+            return redirect('/teacher.html')
+def js_cookie(req):
+
+    obj = render(req,'js_cookie.html')
+    obj.set_cookie('name','xiaoqiang')
+    return obj
+
+#
+# class PageHelper:
+#     def __init__(self):
+#         pass
+#
+#
+#     def getStart(self,current_page,pre_page=10):
+#         return (current_page - 1) * pre_page
+#     def getEnd(self,current_page,pre_page=10):
+#         return  current_page*pre_page
+#
+#     # pre_page:每页显示的记录数
+#     def page_str(self,toal_count,current_page,base_url,pre_page=10):
+#         # 每页显示10条数据
+#         # divmod 方法返回两个值一个是商，一个是余数
+#         v, a = divmod(toal_count, pre_page)
+#         if a != 0:
+#             v += 1
+#         pager_list = []
+#         if current_page > 1:
+#             pager_list.append('<a href = "%s?p=%s" >上一页</a>' % (base_url,current_page - 1))
+#
+#         # 总页数<=11
+#         #     page_start=1
+#         #     page_end= 总页数
+#         #
+#         # 总页数 > 11
+#         #     当前页<6
+#         #         page_start=1
+#         #         page_end=11
+#         #     else
+#         #         page_start = 当前页 -5
+#         #          page_end = 当前页 + 6
+#         #          if page_end> 总页数
+#         #               page_end = 总页数
+#         #
+#         #
+#         if v <= 11:
+#             page_start = 1
+#             page_end = v + 1
+#         else:
+#             if current_page < 6:
+#                 page_start = 1
+#                 page_end = 12
+#             else:
+#                 page_start = current_page - 5
+#                 page_end = current_page + 6
+#                 if page_end > v:
+#                     page_start = v - 10
+#                     page_end = v + 1
+#
+#         for i in range(page_start, page_end):
+#             # 为当前页设置class，让用户可以知道当前是第几页
+#             if i == current_page:
+#                 pager_list.append('<a class="active" href = "%s?p=%s" >%s</a>' % (base_url,i, i))
+#             else:
+#                 pager_list.append('<a href = "%s?p=%s" >%s</a>' % (base_url,i, i))
+#
+#
+#         # pager = '''
+#         #     <a href="classes.html?p=1">1</a>
+#         #     <a href="classes.html?p=2">2</a>
+#         #     <a href="classes.html?p=3">3</a>
+#         # '''
+#
+#         if current_page < v:
+#             pager_list.append('<a href = "%s?p=%s" >下一页</a>' % (base_url,current_page + 1))
+#
+#         pager = "".join(pager_list)
+#         return pager

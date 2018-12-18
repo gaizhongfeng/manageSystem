@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{#继承layout.html ，添加自己的东西#}
+{% block css %}
+{% endblock %}
+
+
+{% block context %}
+    <h1> 添加班级  </h1>
+    <form action="/add_classes.html" method="post">
+        <input type="text" name="caption"/>
+        <input type="submit" value="提交">
+    {{ msg }}
+    </form>
+{% endblock %}
+
+
+
+
+{% block js %}
+    <script>
+        $(function () {
+            $('#item_class').addClass('active');
+        });
+
+    </script>
+{% endblock %}

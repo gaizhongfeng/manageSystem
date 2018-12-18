@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{#继承layout.html ，添加自己的东西#}
+{% block css %}
+
+{% endblock %}
+
+{% block context %}
+  <h1>add teacher</h1>
+
+    <form action="/add_teacher.html" method="post">
+        <p>name:<input type="text" name="name"></p>
+        <p>
+            class:<select name="cls" multiple>
+                        {% for row in cls_list %}
+                        <option value="{{ row.id }}">{{ row.caption }}</option>
+                        {% endfor %}
+                    </select>
+        </p>
+
+        <input type="submit" value="submit"/>
+    </form>
+{% endblock %}
+
+
+{% block js %}
+    <script>
+        $(function () {
+            $('#item_teacher').addClass('active')
+        })
+    </script>
+{% endblock %}
